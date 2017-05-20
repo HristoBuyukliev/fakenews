@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
-TRAIN_SPLIT = 2000
+TRAIN_SPLIT = 2300
 N_GRAM_RANGE = 5
 
 data = pd.read_csv('data/FN_Training_Set.csv', encoding='cp1251')
@@ -20,15 +20,19 @@ vectorizer = TfidfVectorizer(
         min_df=100)
 
 X = vectorizer.fit_transform(data.Content.values.astype('U'))
-y = data.click_bait_score.values
+y = data.fake_news_score.values
+
+x_train, x_test, y_train, y_test = train_test_split(X, y, train_size = 0.8)
+
 
 # logistic regression
 for C in [10**(i/2) for i in range(-6,7)]:
 	print C
 	lr = LogisticRegression(multi_class='multinomial', solver='lbfgs', C=C)
-	lr.fit(X[:TRAIN_SPLIT], y[:TRAIN_SPLIT])
-	predictions = lr.predict(X[TRAIN_SPLIT:])
-	print metrics.accuracy_score(predictions, y[TRAIN_SPLIT:])
+	lr.fit(x_train, y_train)
+	predictions = lr.predict(x_test)
+	print metrics.accuracy_score(predictions, y_test)
+
 
 
 # SVMs
@@ -40,3 +44,16 @@ for kernel in ['linear', 'poly', 'rbf']:
 		svm.fit(X[:TRAIN_SPLIT], y[:TRAIN_SPLIT])
 		predictions = svm.predict(X[TRAIN_SPLIT:])
 		print metrics.accuracy_score(predictions, y[TRAIN_SPLIT:])
+
+# Linear regression
+lr = LinearRegression()
+lr.fit(X[:TRAIN_SPLIT], y[:TRAIN_SPLIT])
+predictions = lr.predict(X[TRAIN_SPLIT:]).round().clip(0,3)
+print metrics.accuracy_score(predictions, y[TRAIN_SPLIT:])
+
+# decision tree
+for depth in [2, 5, 10]:
+	dt = DecisionTreeClassifier(max_depth=depth)
+	dt.fit(x_train, y_train)
+	predictions = dt.transform(x_test)
+	print metrics.accuracy_score(y_test, predictions)
